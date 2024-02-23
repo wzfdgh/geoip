@@ -50,9 +50,9 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/apple
           # cat ip.txt | awk -F '|' '/JP/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/jp
           # cat ip.txt | awk -F '|' '/JP/&&/ipv6/ {print $4 "/" $5}' >> data/jp
-          curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@sg.txt > data/telegramsg
-          curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@us.txt > data/telegramus
-          curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@eu.txt > data/telegrameu
+          # curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@sg.txt > data/telegramsg
+          # curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@us.txt > data/telegramus
+          # curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@eu.txt > data/telegrameu
 
       - name: Build geoip files
         run: |
