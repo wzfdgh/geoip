@@ -2,7 +2,7 @@ name: Build geoip files
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 4"
+    - cron: "0 1 * * 4"
   push:
     branches:
       - master
@@ -42,10 +42,11 @@ jobs:
           curl -sSL https://www.gstatic.com/ipranges/goog.json | jq --raw-output '.prefixes[].ipv4Prefix,.prefixes[].ipv6Prefix | select(. != null)' >> data/google
           curl -sSL https://www.gstatic.com/ipranges/cloud.json | jq --raw-output '.prefixes[].ipv4Prefix,.prefixes[].ipv6Prefix | select(. != null)' >> data/google
           # curl -sSL https://ip-ranges.amazonaws.com/ip-ranges.json | jq --raw-output '.prefixes[],.ipv6_prefixes[] | select(.service == "CLOUDFRONT") | .ip_prefix,.ipv6_prefix' | grep "/" >> data/cloudfront
-          curl -sSL https://ftp.apnic.net/stats/apnic/delegated-apnic-latest > ip.txt
-          if [ "`cat ip.txt`" = "" ]; then curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/release/ip.txt > ip.txt; fi   
-          cat ip.txt | awk -F '|' '/CN/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/cn
-          cat ip.txt | awk -F '|' '/CN/&&/ipv6/ {print $4 "/" $5}' >> data/cn
+          # curl -sSL https://ftp.apnic.net/stats/apnic/delegated-apnic-latest > ip.txt
+          # if [ "`cat ip.txt`" = "" ]; then curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/release/ip.txt > ip.txt; fi   
+          # cat ip.txt | awk -F '|' '/CN/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/cn
+          # cat ip.txt | awk -F '|' '/CN/&&/ipv6/ {print $4 "/" $5}' >> data/cn
+          curl -sSL https://raw.githubusercontent.com/v2fly/geoip/release/text/cn.txt > data/cn
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/BiliBili/BiliBili_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/bilibili
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/apple
           # cat ip.txt | awk -F '|' '/JP/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/jp
@@ -83,17 +84,10 @@ jobs:
       - name: Move files to publish directory
         run: |
           mkdir -p publish
-<<<<<<< HEAD
           # mv ./output/dat/*.dat ./output/dat/*.sha256sum ./output/maxmind/*.mmdb ./output/maxmind/*.sha256sum ./publish/
           mv ./output/dat/*.dat ./publish/
           # cp ./data/cn ./publish/cn.txt
-=======
-          wget -nv -O- "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${{ secrets.LICENSE_KEY }}&suffix=tar.gz" | tar zxv
-          cp -v GeoLite*/*.mmdb publish
-          mv ./output/dat/*.dat ./output/dat/*.sha256sum ./output/maxmind/*.mmdb ./output/maxmind/*.sha256sum ./publish/
-          cp ./data/cn ./publish/cn.txt
->>>>>>> 3df90a3 (Update build.yml)
-          cp ./ip.txt ./publish/ip.txt
+          # cp ./ip.txt ./publish/ip.txt
           cp -fpPR ./output/text ./publish
 
       - name: Git push assets to "release" branch
