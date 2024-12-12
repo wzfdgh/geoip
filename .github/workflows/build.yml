@@ -29,9 +29,8 @@ jobs:
 
       - name: Set variables
         run: |
-          echo "TAG_NAME=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
-          echo "RELEASE_NAME=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
-        shell: bash
+          # echo "TAG_NAME=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
+          echo "RELEASE_NAME=$(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
 
       - name: Fetch lists from ripe.net
         run: |
@@ -42,49 +41,51 @@ jobs:
         run: |
           curl -sSL https://www.gstatic.com/ipranges/goog.json | jq --raw-output '.prefixes[].ipv4Prefix,.prefixes[].ipv6Prefix | select(. != null)' >> data/google
           curl -sSL https://www.gstatic.com/ipranges/cloud.json | jq --raw-output '.prefixes[].ipv4Prefix,.prefixes[].ipv6Prefix | select(. != null)' >> data/google
-          curl -sSL https://ip-ranges.amazonaws.com/ip-ranges.json | jq --raw-output '.prefixes[],.ipv6_prefixes[] | select(.service == "CLOUDFRONT") | .ip_prefix,.ipv6_prefix' | grep "/" >> data/cloudfront
-          curl -sSL http://ftp.apnic.net/stats/apnic/delegated-apnic-latest > ip.txt
-          if [ "`cat ip.txt`" = "" ]; then curl -sSL https://raw.githubusercontent.com/xishang0128/geoip/release/ip.txt > ip.txt; fi   
+          # curl -sSL https://ip-ranges.amazonaws.com/ip-ranges.json | jq --raw-output '.prefixes[],.ipv6_prefixes[] | select(.service == "CLOUDFRONT") | .ip_prefix,.ipv6_prefix' | grep "/" >> data/cloudfront
+          curl -sSL https://ftp.apnic.net/stats/apnic/delegated-apnic-latest > ip.txt
+          if [ "`cat ip.txt`" = "" ]; then curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/release/ip.txt > ip.txt; fi   
           cat ip.txt | awk -F '|' '/CN/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/cn
           cat ip.txt | awk -F '|' '/CN/&&/ipv6/ {print $4 "/" $5}' >> data/cn
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/BiliBili/BiliBili_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/bilibili
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/apple
-          cat ip.txt | awk -F '|' '/JP/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/jp
-          cat ip.txt | awk -F '|' '/JP/&&/ipv6/ {print $4 "/" $5}' >> data/jp
+          # cat ip.txt | awk -F '|' '/JP/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/jp
+          # cat ip.txt | awk -F '|' '/JP/&&/ipv6/ {print $4 "/" $5}' >> data/jp
+          curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/data/telegram@sg.txt > data/telegramsg
+          curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/data/telegram@us.txt > data/telegramus
+          curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/data/telegram@eu.txt > data/telegrameu
 
       - name: Build geoip files
         run: |
           go run ./
 
-      - name: Verify mmdb files
-        run: |
-          cd ./output/maxmind || exit 1
-          go install -v github.com/maxmind/mmdbverify@latest
-          for name in $(ls *.mmdb); do
-            $(go env GOPATH)/bin/mmdbverify -file ${name}
-          done
+#      - name: Verify mmdb files
+#        run: |
+#          cd ./output/maxmind || exit 1
+#          go install -v github.com/maxmind/mmdbverify@latest
+#          for name in $(ls *.mmdb); do
+#            $(go env GOPATH)/bin/mmdbverify -file ${name}
+#          done
 
-      - name: Generate sha256 checksum for dat files
-        run: |
-          cd ./output/dat || exit 1
-          for name in $(ls *.dat); do
-            sha256sum ${name} > ./${name}.sha256sum
-          done
+#      - name: Generate sha256 checksum for dat files
+#        run: |
+#          cd ./output/dat || exit 1
+#          for name in $(ls *.dat); do
+#            sha256sum ${name} > ./${name}.sha256sum
+#          done
 
-      - name: Generate sha256 checksum for mmdb files
-        run: |
-          cd ./output/maxmind || exit 1
-          for name in $(ls *.mmdb); do
-            sha256sum ${name} > ./${name}.sha256sum
-          done
+#      - name: Generate sha256 checksum for mmdb files
+#        run: |
+#          cd ./output/maxmind || exit 1
+#          for name in $(ls *.mmdb); do
+#            sha256sum ${name} > ./${name}.sha256sum
+#          done
 
       - name: Move files to publish directory
         run: |
           mkdir -p publish
-          wget -nv -O- "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${{ secrets.LICENSE_KEY }}&suffix=tar.gz" | tar zxv
-          cp -v GeoLite*/*.mmdb publish
-          mv ./output/dat/*.dat ./output/dat/*.sha256sum ./output/maxmind/*.mmdb ./output/maxmind/*.sha256sum ./publish/
-          cp ./data/cn ./publish/cn.txt
+          # mv ./output/dat/*.dat ./output/dat/*.sha256sum ./output/maxmind/*.mmdb ./output/maxmind/*.sha256sum ./publish/
+          mv ./output/dat/*.dat ./publish/
+          # cp ./data/cn ./publish/cn.txt
           cp ./ip.txt ./publish/ip.txt
           cp -fpPR ./output/text ./publish
 
@@ -110,14 +111,27 @@ jobs:
       - name: Remove some files to avoid publishing to GitHub release
         run: rm -rf ./publish/*.{gz,zip} ./publish/text
 
-      - name: Upload files to GitHub release
-        uses: softprops/action-gh-release@v1
+      - name: Delete current release assets
+        uses: andreaswilli/delete-release-assets-action@v3.0.0
         with:
-          name: latest
-          tag_name: latest
-          draft: false
-          prerelease: false
-          files: |
-            ./publish/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: latest
+          deleteOnlyFromDrafts: false
+
+      - name: Upload files to GitHub release
+        id: upload_release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          release_name: latest
+          tag: latest
+          file_glob: true
+          overwrite: true
+          file: ./publish/*
+          body: ${{ env.RELEASE_NAME }}
+
+      - name: Cleanup Workflow
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          retain_days: 0
+          keep_minimum_runs: 1
