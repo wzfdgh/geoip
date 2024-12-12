@@ -2,7 +2,7 @@ name: Build geoip files
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 4"
+    - cron: "0 1 * * 4"
   push:
     branches:
       - master
@@ -42,17 +42,18 @@ jobs:
           curl -sSL https://www.gstatic.com/ipranges/goog.json | jq --raw-output '.prefixes[].ipv4Prefix,.prefixes[].ipv6Prefix | select(. != null)' >> data/google
           curl -sSL https://www.gstatic.com/ipranges/cloud.json | jq --raw-output '.prefixes[].ipv4Prefix,.prefixes[].ipv6Prefix | select(. != null)' >> data/google
           # curl -sSL https://ip-ranges.amazonaws.com/ip-ranges.json | jq --raw-output '.prefixes[],.ipv6_prefixes[] | select(.service == "CLOUDFRONT") | .ip_prefix,.ipv6_prefix' | grep "/" >> data/cloudfront
-          curl -sSL https://ftp.apnic.net/stats/apnic/delegated-apnic-latest > ip.txt
-          if [ "`cat ip.txt`" = "" ]; then curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/release/ip.txt > ip.txt; fi   
-          cat ip.txt | awk -F '|' '/CN/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/cn
-          cat ip.txt | awk -F '|' '/CN/&&/ipv6/ {print $4 "/" $5}' >> data/cn
+          # curl -sSL https://ftp.apnic.net/stats/apnic/delegated-apnic-latest > ip.txt
+          # if [ "`cat ip.txt`" = "" ]; then curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/release/ip.txt > ip.txt; fi   
+          # cat ip.txt | awk -F '|' '/CN/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/cn
+          # cat ip.txt | awk -F '|' '/CN/&&/ipv6/ {print $4 "/" $5}' >> data/cn
+          curl -sSL https://raw.githubusercontent.com/v2fly/geoip/release/text/cn.txt > data/cn
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/BiliBili/BiliBili_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/bilibili
           curl -sSL https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/master/rule/Loon/Apple/Apple_Resolve.list | grep IP-CIDR, | sed 's/IP-CIDR,//g' > data/apple
           # cat ip.txt | awk -F '|' '/JP/&&/ipv4/ {print $4 "/" 32-log($5)/log(2)}' > data/jp
           # cat ip.txt | awk -F '|' '/JP/&&/ipv6/ {print $4 "/" $5}' >> data/jp
-          curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/data/telegram@sg.txt > data/telegramsg
-          curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/data/telegram@us.txt > data/telegramus
-          curl -sSL https://raw.githubusercontent.com/lolion1y/geoip/data/telegram@eu.txt > data/telegrameu
+          # curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@sg.txt > data/telegramsg
+          # curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@us.txt > data/telegramus
+          # curl -sSL https://raw.githubusercontent.com/wzfdgh/geoip/data/telegram@eu.txt > data/telegrameu
 
       - name: Build geoip files
         run: |
@@ -86,7 +87,7 @@ jobs:
           # mv ./output/dat/*.dat ./output/dat/*.sha256sum ./output/maxmind/*.mmdb ./output/maxmind/*.sha256sum ./publish/
           mv ./output/dat/*.dat ./publish/
           # cp ./data/cn ./publish/cn.txt
-          cp ./ip.txt ./publish/ip.txt
+          # cp ./ip.txt ./publish/ip.txt
           cp -fpPR ./output/text ./publish
 
       - name: Git push assets to "release" branch
@@ -129,9 +130,3 @@ jobs:
           overwrite: true
           file: ./publish/*
           body: ${{ env.RELEASE_NAME }}
-
-      - name: Cleanup Workflow
-        uses: Mattraks/delete-workflow-runs@main
-        with:
-          retain_days: 0
-          keep_minimum_runs: 1
